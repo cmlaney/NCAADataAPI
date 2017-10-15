@@ -140,8 +140,6 @@ def getPlays(team):
         for play in cPlay.fetchall():
             plays.append(Play(play[0], play[1], play[3], play[2], play[4]))
             profilePlay(plays[-1], team)
-            #if 'to NEB' in plays[-1].text:
-                #print(plays[-1].text)
         dates[date].append(Possession(team, time, plays, period, id))
 
     return dates
@@ -254,146 +252,172 @@ def profilePlay(play, team):
     cGame.execute('select short_name from team where team_name="{}"'.format(team))
     shortName = cGame.fetchone()[0]
     intercepted = False
-    fumbled = False
-    touchdown = False
-    passing = False
-    rushing = False
-    completion = False
-    punt = False
-    punt_yds = False
-    fair_catch = False
-    downed = False
-    kick_ret = False
-    kick_ret_yds = 0
-    field_pos = 0
-    touchback = False
-    yds = 0
-    extra_point = False
-    xp_good = False
-    sacked = False
-    field_goal = False
-    field_goal_yds = 0
 
     if 'INTERCEPTED' in play.text:
-        intercepted = True
+        play.intercepted = True
     if 'FUMBLES' in play.text:
-        fumbled = True
+        play.fumbled = True
     if 'Penalty' in play.text:
-        penalty = True
+        play.penalty = True
     if 'sacked' in play.text:
-        sacked = True
+        play.sacked = True
     if 'touchdown' in play.text:
-        touchdown = True
+        play.touchdown = True
     if 'extra point' in play.text:
-        extra_point = True
+        play.extra_point = True
         if 'good' in play.text:
-            xp_good = True
+            play.xp_good = True
     if 'Field Goal' in play.text:
-        field_goal = True
+        play.field_goal = True
         param = re.findall('[0-9]+ yard', play.text)
         if len(param) > 0:
             comp = param[0].strip().split()
-            field_goal_yds = int(comp[0])
+            play.field_goal_yds = int(comp[0])
+    if 'safety' in play.text:
+        play.safety = True
     if ' complete' in play.text:
-        passing = True
-        completion = True
+        play.passing = True
+        play.completion = True
         param = re.findall('to [A-Z]+ [0-9]+', play.text)
         if len(param) > 0:
             comp = param[0].strip().split()
             if shortName == comp[1]:
-                field_pos = 100 - int(comp[2])
+                play.field_pos = 100 - int(comp[2])
             else:
-                field_pos = int(comp[2])
+                play.field_pos = int(comp[2])
         param = re.findall('for [0-9]+ yard', play.text)
         if len(param) > 0:
             comp = param[0].strip().split()
-            yds = int(comp[-2])
+            play.yds = int(comp[-2])
         if 'touchdown' in play.text:
             param = re.findall('runs [0-9]+ yard', play.text)
             if len(param) > 0:
                 comp = param[0].strip().split()
-                yds = int(comp[-2])
+                play.yds = int(comp[-2])
     if 'incomplete' in play.text:
-        passing = True
+        play.passing = True
     if 'kicks' in play.text:
-        kick_ret = True
+        play.kick_ret = True
         if 'touchback' in play.text:
-            touchback = True
-            field_pos = 20
+            play.touchback = True
+            play.field_pos = 20
         elif 'touchdown' in play.text:
-            touchdown = True
-            field_pos = 0
+            play.touchdown = True
+            play.field_pos = 0
             kick_param = re.findall('runs [0-9]+ yard', play.text)
             if len(kick_param) > 0:
                 components = kick_param[0].strip().split()
-                kick_ret_yds = components[1]
+                play.kick_ret_yds = components[1]
         else:
             kick_param = re.findall('to [A-Z]+ [0-9]+ for [0-9]+ yard', play.text)
             if len(kick_param) > 0:
                 components = kick_param[0].strip().split()
                 if components[2] == shortName:
-                    field_pos = 100 - int(components[2])
+                    play.field_pos = 100 - int(components[2])
                 else:
-                    field_pos = int(components[2])
-                kick_ret_yds = int(components[4])
+                    play.field_pos = int(components[2])
+                play.kick_ret_yds = int(components[4])
     if 'punts' in play.text:
-        punt = True
+        play.punt = True
         param = re.findall('punts [0-9]+ yard', play.text)
         if len(param) > 0:
             comp = param[0].strip().split()
-            punt_yds = int(comp[1])
+            play.punt_yds = int(comp[1])
         yd_param = re.findall('to (?:the)? [A-Z]+ [0-9]+', play.text)
         if len(yd_param) > 0:
             comp = yd_param[0].strip().split()
             if shortName == comp[-2]:
-                field_pos = int(comp[-1])
+                play.field_pos = int(comp[-1])
             else:
-                field_pos = 100 - int(comp[-1])
+                play.field_pos = 100 - int(comp[-1])
         if 'touchback' in play.text:
-            touchback = True
+            play.touchback = True
         if 'touchdown' in play.text:
-            touchdown = True
+            play.touchdown = True
         if 'fair catch' in play.text:
-            fair_catch = True
+            play.fair_catch = True
         if 'downed' in play.text:
-            downed = True
-    if not (passing or punt or kick_ret or extra_point or field_goal):
-        rushing = True
+            play.downed = True
+    if not (play.passing or play.punt or play.kick_ret or play.extra_point or play.field_goal):
+        play.rushing = True
         if 'touchdown' in play.text:
-            touchdown = True
+            play.touchdown = True
             param = re.findall('runs [0-9]+ yard', play.text)
             if len(param) > 0:
                 comp = param[0].strip().split()
-                yds = int(comp[1])
+                play.yds = int(comp[1])
         else:
-            param = re.findall('[to|at] [A-Z]+ [0-9]+ for [-?0-9]+ yard', play.text)
+            param = re.findall('for [-?0-9]+ yard', play.text)
             if len(param) > 0:
                 comp = param[0].strip().split()
-                yds = int(comp[-2])
-                if shortName == comp[1]:
-                    field_pos = 100 - int(comp[2])
+                play.yds = int(comp[-2])
+                if play.safety:
+                    play.field_pos = 100
                 else:
-                    field_pos = int(comp[2])
-    play.intercepted = intercepted
-    play.fumbled = fumbled
-    play.touchdown = touchdown
-    play.passing = passing
-    play.rushing = rushing
-    play.completion = completion
-    play.punt = punt
-    play.punt_yds = punt_yds
-    play.fair_catch = fair_catch
-    play.downed = downed
-    play.kick_ret = kick_ret
-    play.kick_ret_yds = kick_ret_yds
-    play.field_pos = field_pos
-    play.touchback = touchback
-    play.yds = yds
-    play.extra_point = extra_point
-    play.xp_good = xp_good
-    play.sacked = sacked
-    play.field_goal = field_goal
-    play.field_goal_yds = field_goal_yds
+                    param = re.findall('[to|at] [A-Z]+ [0-9]+', play.text)
+                    if len(param) > 0:
+                        comp = param[0].strip().split()
+                        if shortName == comp[1]:
+                            play.field_pos = 100 - int(comp[2])
+                        else:
+                            play.field_pos = int(comp[2])
+
+def updatePlay(play):
+    sql = 'update play set '
+    execute = play.passing or play.punt or play.kick_ret or play.extra_point or play.field_goal or play.rushing
+    args = []
+    if play.touchdown:
+        args.append('touchdown=1')
+    if play.intercepted:
+        args.append('intercepted=1')
+    if play.safety:
+        args.append('safety=1')
+    if play.fumbled:
+        args.append('fumbled=1')
+    if play.passing:
+        args.append('passing=1')
+        if play.completion:
+            args.append('completion=1')
+        args.append('yds={}'.format(play.yds))
+    if play.rushing:
+        args.append('rushing=1')
+        args.append('yds={}'.format(play.yds))
+    if play.sacked:
+        args.append('sacked=1')
+    if play.punt:
+        args.append('punt=1')
+        args.append('punt_yds={}'.format(play.punt_yds))
+        if play.fair_catch:
+            args.append('fair_catch=1')
+        if play.downed:
+            args.append('downed=1')
+    if play.field_goal:
+        args.append('field_goal=1')
+        args.append('field_goal_yds={}'.format(play.field_goal_yds))
+    if play.kick_ret:
+        args.append('kick_ret=1')
+        args.append('kick_ret_yds={}'.format(play.kick_ret_yds))
+    if play.touchback:
+        args.append('touchback=1')
+    if play.field_pos > 0:
+        args.append('field_pos={}'.format(play.field_pos))
+    if play.extra_point:
+        args.append('extra_point=1')
+        if play.xp_good:
+            args.append('xp_good=1')
+
+    first = True
+    if len(args) > 0:
+        for arg in args:
+            if first:
+                first = False
+                sql += arg
+            else:
+                sql += ', ' + arg
+
+    sql += ' where rowid = {}'.format(play.id)
+    if execute:
+        cGame.execute(sql)
 
 def printBigPlays(team):
     bigs = {}
@@ -441,10 +465,12 @@ def determineShortNames():
                     break
             cGame.execute('update team set short_name="{}" where team_name="{}"'.format(shortName, otherTeam))
 
-dates = getPlays('Nebraska')
-for date, possessions in dates.items():
-    print(date)
-    for possession in possessions:
-        print(str(possession))
+teams = []
+cGame.execute('select team_name from team')
+for row in cGame.fetchall():
+    dates = getPlays(row[0])
+
+connGame.commit()
+
             #for bigplay in getBigPlays('Nebraska'):
     #print(str(bigplay))

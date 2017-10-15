@@ -21,7 +21,8 @@ class Play(object):
     def __init__(self, text, drive, vScore, hScore, rowid):
         self.id = rowid
         try:
-            self.text = text.encode('ascii')
+            test = text.encode('ascii')
+            self.text = text
         except UnicodeEncodeError:
             self.text = 'Unable to parse text'
             pass
@@ -40,7 +41,7 @@ class Play(object):
         self.rushing = False
         self.completion = False
         self.punt = False
-        self.punt_yds = False
+        self.punt_yds = 0
         self.fair_catch = False
         self.downed = False
         self.kick_ret = False
@@ -53,6 +54,7 @@ class Play(object):
         self.sacked = False
         self.field_goal = False
         self.field_goal_yds = 0
+        self.safety = False
 
     def __str__(self):
         breakdown = ''
@@ -62,12 +64,12 @@ class Play(object):
                 breakdown += 'complete, for {} yards, {} to go'.format(self.yds, self.field_pos)
                 if self.touchdown:
                     breakdown += ', touchdown'
-            elif self.intercepted:
-                breakdown += 'intercepted'
-            elif self.fumbled:
-                breakdown += 'fumbled'
             else:
                 breakdown += 'incomplete'
+            if self.intercepted:
+                breakdown += ', intercepted'
+            elif self.fumbled:
+                breakdown += ', fumbled'
             if self.touchdown:
                 breakdown += ', touchdown'
         elif self.rushing:
